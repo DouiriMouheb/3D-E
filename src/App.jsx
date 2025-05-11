@@ -6,6 +6,8 @@ import HouseModel from "./pages/HouseModel";
 import TourCamera from "./pages/TourCamera";
 import Hotspot from "./pages/Hotspot";
 import WaypointEditor from "./pages/WaypointEditor";
+// Import the CollisionHandler
+import CollisionHandler from "./pages/CollisionHandler";
 
 export default function App() {
   // State for the tour
@@ -14,41 +16,36 @@ export default function App() {
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [controlsEnabled, setControlsEnabled] = useState(true);
 
+  // Add tempWaypoint state for custom hotspot navigation
+  const [tempWaypoint, setTempWaypoint] = useState(null);
+
+  // Add state for collision detection
+  const [collisionEnabled, setCollisionEnabled] = useState(true);
+
   // State for editor
   const [isEditorMode, setIsEditorMode] = useState(false);
   const [editorVisible, setEditorVisible] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [waypoints, setWaypoints] = useState([
     {
-      position: [12.36, 5.34, -14.79],
-      lookAt: [-9.04, -0.63, -13.08],
-      name: "Exterior View",
-    },
-    {
-      position: [-10.54, 3.76, -29.27],
-      lookAt: [-9.29, 0.03, -3.57],
+      position: [-12.8, 3.6, -25.7],
+      lookAt: [-13.05, 3.51, -20.67],
       name: "Back",
     },
     {
-      position: [-11.79, 2.01, 27],
-      lookAt: [-11.78, 1.99, 26.61],
-      name: "Kitchen",
+      position: [42.67, 2.59, 20.21],
+      lookAt: [37.64, 2.57, 20.35],
+      name: "right",
     },
     {
-      position: [0, 1.6, -10],
-      lookAt: [0, 1, 0],
-      name: "Dining Room",
-    },
-
-    {
-      position: [-15.19, 5.98, 83.66],
-      lookAt: [0, 1, 0],
-      name: "Front Door",
+      position: [-16.51, 4.81, 78.08],
+      lookAt: [-16.02, 3.97, 68.11],
+      name: "Front",
     },
     {
-      position: [0, 1.6, 2],
-      lookAt: [0, 1.6, 0],
-      name: "Entrance Hall",
+      position: [-78.48, 3.32, 28.31],
+      lookAt: [-57.95, 3.83, 28.68],
+      name: "Left ",
     },
     {
       position: [-28.04, 5.46, 30.67],
@@ -57,19 +54,75 @@ export default function App() {
     },
   ]);
 
-  // Define hotspots (clickable points in your 3D scene)
+  // Define hotspots with both position and lookAt values
   const [hotspots, setHotspots] = useState([
+    // Front view hotspot
     {
-      position: [-0.72, 2.12, -19.96],
-      label: "Go to Front Door",
-      waypointIndex: 1,
+      position: [-16.51, 3.0, 60.0], // Positioned in front of the house
+      lookAt: [-16.02, 3.97, 50.0], // Looking directly at the front of the house
+      label: "Go to Front View",
+      name: "Front View Hotspot",
     },
     {
-      position: [2, 1, 0],
-      label: "Go to Living Room",
-      waypointIndex: 3,
+      position: [-16.09, 3.75, 46.56], // Positioned in front of the house
+      lookAt: [-16.63, 4.61, 42.53], // Looking directly at the front of the house
+      label: "Go to Front View 2",
+      name: "Front View Hotspot",
+    },
+    {
+      position: [-16.78, 1.65, 36.72], // Positioned in front of the house
+      lookAt: [-16.63, 1.25, 32.58], // Looking directly at the front of the house
+      label: "Go to Front View 3",
+      name: "Front View Hotspot",
+    },
+    {
+      position: [-19.42, 2.12, 24], // Positioned in front of the house
+      lookAt: [-15.27, 1.92, 24.22], // Looking directly at the front of the house
+      label: "Go to Front View 4",
+      name: "Front View Hotspot",
+    },
+    // Back view hotspot
+    {
+      position: [-12.8, 2.5, -15.0], // Positioned at the back of the house
+      lookAt: [-13.05, 3.51, -10.0], // Looking at the back of the house
+      label: "Go to Back View",
+      name: "Back View Hotspot",
+    },
+    // Right view hotspot
+    {
+      position: [30.0, 2.0, 20.21], // Positioned to the right of the house
+      lookAt: [20.0, 2.57, 20.35], // Looking toward the right side
+      label: "Go to Right View",
+      name: "Right View Hotspot",
+    },
+    // Left view hotspot
+    {
+      position: [-60.0, 2.5, 28.31], // Positioned to the left of the house
+      lookAt: [-50.0, 3.0, 28.68], // Looking toward the left side
+      label: "Go to Left View",
+      name: "Left View Hotspot",
+    },
+    // Picina hotspot
+    {
+      position: [-28.04, 3.0, 20.0], // Positioned near the pool
+      lookAt: [-28.04, 3.0, 25.0], // Looking at the pool
+      label: "Go to Pool",
+      name: "Pool Hotspot",
     },
   ]);
+
+  // Handle hotspot click with custom position and lookAt
+  const handleHotspotClick = (hotspot) => {
+    // Create a custom waypoint using the hotspot's position and lookAt values
+    const customWaypoint = {
+      position: hotspot.position,
+      lookAt: hotspot.lookAt,
+      name: hotspot.name || hotspot.label,
+    };
+
+    // Set the temporary waypoint (this will be used by TourCamera)
+    setTempWaypoint(customWaypoint);
+  };
 
   // Save waypoints to localStorage
   useEffect(() => {
@@ -90,18 +143,26 @@ export default function App() {
     }
   }, []);
 
+  // Toggle collision detection
+  const toggleCollision = () => {
+    setCollisionEnabled(!collisionEnabled);
+  };
+
   // Navigation functions
   const nextWaypoint = () => {
+    setTempWaypoint(null); // Clear any temp waypoint
     setCurrentWaypoint((prev) => (prev + 1) % waypoints.length);
   };
 
   const prevWaypoint = () => {
+    setTempWaypoint(null); // Clear any temp waypoint
     setCurrentWaypoint(
       (prev) => (prev - 1 + waypoints.length) % waypoints.length
     );
   };
 
   const toggleAutoPlay = () => {
+    setTempWaypoint(null); // Clear any temp waypoint when toggling autoplay
     setAutoPlayEnabled(!autoPlayEnabled);
   };
 
@@ -114,6 +175,7 @@ export default function App() {
     setIsEditorMode(!isEditorMode);
     setAutoPlayEnabled(false);
     setEditorVisible(false);
+    setTempWaypoint(null); // Clear temp waypoint when entering/exiting editor mode
   };
 
   const handleSaveWaypoint = (newWaypoint) => {
@@ -138,6 +200,19 @@ export default function App() {
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
     downloadAnchorNode.setAttribute("download", "tour-waypoints.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  // Export hotspots as JSON
+  const exportHotspots = () => {
+    const dataStr =
+      "data:text/json;charset=utf-8," +
+      encodeURIComponent(JSON.stringify(hotspots, null, 2));
+    const downloadAnchorNode = document.createElement("a");
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "tour-hotspots.json");
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -192,10 +267,12 @@ export default function App() {
             )}
 
             {/* Waypoint name display */}
-            {!isEditorMode && waypoints.length > 0 && (
+            {!isEditorMode && (
               <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
                 <div className="px-4 py-2 bg-gray-800 bg-opacity-80 text-white rounded-md">
-                  {waypoints[currentWaypoint].name}
+                  {tempWaypoint
+                    ? tempWaypoint.name
+                    : waypoints[currentWaypoint].name}
                 </div>
               </div>
             )}
@@ -227,6 +304,17 @@ export default function App() {
                 >
                   {controlsEnabled ? "Lock Camera" : "Free Camera"}
                 </button>
+                {/* Add collision toggle button */}
+                <button
+                  className={`px-4 py-2 ${
+                    collisionEnabled ? "bg-green-600" : "bg-red-600"
+                  } text-white rounded-md hover:${
+                    collisionEnabled ? "bg-green-700" : "bg-red-700"
+                  }`}
+                  onClick={toggleCollision}
+                >
+                  Collision: {collisionEnabled ? "On" : "Off"}
+                </button>
               </div>
             )}
 
@@ -244,6 +332,12 @@ export default function App() {
                   onClick={exportWaypoints}
                 >
                   Export Waypoints
+                </button>
+                <button
+                  className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+                  onClick={exportHotspots}
+                >
+                  Export Hotspots
                 </button>
                 <button
                   className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
@@ -266,14 +360,17 @@ export default function App() {
                 <div
                   key={index}
                   className={`w-44 rounded-md ${
-                    currentWaypoint === index
+                    currentWaypoint === index && !tempWaypoint
                       ? "bg-blue-500 text-white"
                       : "bg-gray-700 text-gray-200"
                   } flex items-center`}
                 >
                   <button
                     className="flex-1 p-2 text-left truncate"
-                    onClick={() => setCurrentWaypoint(index)}
+                    onClick={() => {
+                      setCurrentWaypoint(index);
+                      setTempWaypoint(null); // Clear temp waypoint when selecting from list
+                    }}
                     title={waypoint.name}
                   >
                     {index + 1}. {waypoint.name}
@@ -294,49 +391,63 @@ export default function App() {
             {/* 3D Scene */}
             <div className="w-full h-full">
               <Canvas>
-                <TourCamera
-                  waypoint={
-                    waypoints[currentWaypoint] || {
-                      position: [0, 1.6, 5],
-                      lookAt: [0, 1, 0],
+                {/* Use the ultra-strict CollisionHandler with extreme settings */}
+                <CollisionHandler
+                  active={collisionEnabled && !isEditorMode}
+                  collisionDistance={7.0} // Ultra-high collision distance
+                  floorClippingPrevention={true}
+                >
+                  <TourCamera
+                    waypoint={
+                      tempWaypoint ||
+                      waypoints[currentWaypoint] || {
+                        position: [0, 1.6, 5],
+                        lookAt: [0, 1, 0],
+                      }
                     }
-                  }
-                  controlsEnabled={isEditorMode || controlsEnabled}
-                  onWaypointReached={() => {
-                    if (autoPlayEnabled) {
-                      setTimeout(nextWaypoint, 3000); // Auto advance after 3s
-                    }
-                  }}
-                />
-                <ambientLight intensity={0.6} />
-                <directionalLight position={[10, 10, 5]} intensity={1} />
-                <Environment preset="sunset" />
+                    controlsEnabled={isEditorMode || controlsEnabled}
+                    onWaypointReached={() => {
+                      if (autoPlayEnabled) {
+                        // Clear temp waypoint after reaching it if in autoplay
+                        if (tempWaypoint) {
+                          setTempWaypoint(null);
+                        }
+                        setTimeout(nextWaypoint, 3000); // Auto advance after 3s
+                      }
+                    }}
+                  />
 
-                {/* The house model */}
-                <HouseModel
-                  position={[0, 0, 0]}
-                  scale={1.5}
-                  rotation={[0, 0, 0]}
-                />
+                  {/* Rest of your existing components */}
+                  <ambientLight intensity={0.6} />
+                  <directionalLight position={[10, 10, 5]} intensity={1} />
+                  <Environment preset="sunset" />
 
-                {/* Hotspots - only shown when not in auto-play and not in editor mode */}
-                {!autoPlayEnabled &&
-                  !isEditorMode &&
-                  hotspots.map((hotspot, i) => (
-                    <Hotspot
-                      key={i}
-                      position={hotspot.position}
-                      label={hotspot.label}
-                      onClick={() => setCurrentWaypoint(hotspot.waypointIndex)}
-                    />
-                  ))}
+                  {/* The house model */}
+                  <HouseModel
+                    position={[0, 0, 0]}
+                    scale={1.5}
+                    rotation={[0, 0, 0]}
+                  />
 
-                {/* Waypoint Editor */}
-                <WaypointEditor
-                  isActive={isEditorMode && editorVisible}
-                  onSaveWaypoint={handleSaveWaypoint}
-                  onCancel={() => setEditorVisible(false)}
-                />
+                  {/* Hotspots - only shown when not in auto-play and not in editor mode */}
+                  {!autoPlayEnabled &&
+                    !isEditorMode &&
+                    hotspots.map((hotspot, i) => (
+                      <Hotspot
+                        key={i}
+                        position={hotspot.position}
+                        label={hotspot.label}
+                        onClick={() => handleHotspotClick(hotspot)}
+                      />
+                    ))}
+
+                  {/* Waypoint Editor */}
+                  <WaypointEditor
+                    isActive={isEditorMode && editorVisible}
+                    onSaveWaypoint={handleSaveWaypoint}
+                    onCancel={() => setEditorVisible(false)}
+                  />
+                </CollisionHandler>
               </Canvas>
             </div>
 
@@ -355,7 +466,7 @@ export default function App() {
                   <div>Hold and drag mouse</div>
 
                   <div>Zoom:</div>
-                  <div>Mouse wheel</div>
+                  <div>Mouse wheel (Editor mode only)</div>
 
                   <div>Adjust speed:</div>
                   <div>+ / - keys</div>

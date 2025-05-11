@@ -22,13 +22,6 @@ export default function Hotspot({ position, onClick, label }) {
       </mesh>
 
       {/* Label that appears on hover */}
-      {hovered && (
-        <Html position={[0, 0.5, 0]} center>
-          <div className="bg-black bg-opacity-75 text-white px-3 py-1 rounded whitespace-nowrap">
-            {label}
-          </div>
-        </Html>
-      )}
     </group>
   );
 }

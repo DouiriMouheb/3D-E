@@ -24,6 +24,18 @@ export default function TourCamera({
   const [moveDown, setMoveDown] = useState(false);
   const [moveSpeed, setMoveSpeed] = useState(0.5);
 
+  // Mark orbit controls for identification by CollisionHandler - run every frame
+  useFrame(() => {
+    // Safe check to ensure controls are initialized
+    if (controlsRef.current && !controlsRef.current.userData) {
+      controlsRef.current.userData = {};
+    }
+
+    if (controlsRef.current && !controlsRef.current.userData.isOrbitControls) {
+      controlsRef.current.userData.isOrbitControls = true;
+    }
+  });
+
   // Keyboard event handlers
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -89,7 +101,7 @@ export default function TourCamera({
     // Calculate right direction
     right.crossVectors(new Vector3(0, 1, 0), forward).normalize();
 
-    // Apply movements
+    // Apply movements - allow collision handler to revert if needed
     if (moveForward) {
       // Move both camera and target forward
       camera.position.addScaledVector(forward, moveAmount);
@@ -126,6 +138,8 @@ export default function TourCamera({
   });
 
   const logCameraPosition = () => {
+    if (!controlsRef.current) return;
+
     console.log("Camera position:", [
       parseFloat(camera.position.x.toFixed(2)),
       parseFloat(camera.position.y.toFixed(2)),
@@ -145,11 +159,13 @@ export default function TourCamera({
     // If in position mode, enable controls and return
     if (isPositionMode) {
       controlsRef.current.enabled = true;
+      controlsRef.current.enableZoom = true; // Enable zoom in position mode
       return;
     }
 
     // Update controls enabled state
     controlsRef.current.enabled = controlsEnabled;
+    controlsRef.current.enableZoom = false; // Disable zoom in viewing mode
 
     // Create vectors from waypoint data
     const targetPosition = new Vector3(...waypoint.position);
@@ -209,8 +225,13 @@ export default function TourCamera({
         target={[0, 1.6, 0]}
         enableDamping
         dampingFactor={0.1}
-        minDistance={0.1}
+        enableZoom={isPositionMode} // Enable zoom only in position mode
+        minDistance={0.5}
         maxDistance={100}
+        // Add stronger constraints
+        maxPolarAngle={Math.PI - 0.2} // More limited looking down
+        minPolarAngle={0.1} // Prevent looking straight up
+        screenSpacePanning={true} // More natural panning
       />
 
       {/* Position mode indicator */}
@@ -220,6 +241,9 @@ export default function TourCamera({
             <div className="mb-1">Position Mode: ON (Free Navigation)</div>
             <div className="text-xs mb-2">
               WASD/Arrows: Move • Q/E: Up/Down • +/-: Speed • Mouse: Look
+            </div>
+            <div className="text-xs mb-2">
+              Zoom: Mouse Wheel • Look: Click and Drag
             </div>
             <button
               className="bg-white text-red-500 px-2 py-1 rounded text-sm"
